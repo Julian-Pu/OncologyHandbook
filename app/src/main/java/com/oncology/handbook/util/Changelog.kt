@@ -15,6 +15,15 @@ object Changelog {
 
     val logs = listOf(
         VersionLog(
+            versionName = "1.6.2",
+            versionCode = 11,
+            date = "2026-09-08",
+            items = listOf(
+                "【修复】章节详情页右上角菜单弹出为白色方块看不见文字，已设置浅色弹出主题",
+                "【优化】手册大类标题栏增加可见的删除按钮，不再仅依赖长按"
+            )
+        ),
+        VersionLog(
             versionName = "1.6.1",
             versionCode = 10,
             date = "2026-09-08",

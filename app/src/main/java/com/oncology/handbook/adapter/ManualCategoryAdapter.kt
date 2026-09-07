@@ -27,7 +27,12 @@ class ManualCategoryAdapter(
             binding.recyclerViewSections.layoutManager = LinearLayoutManager(binding.root.context)
             binding.recyclerViewSections.adapter = sectionAdapter
 
-            // 长按分类标题 → 删除分类
+            // 删除按钮 → 删除分类
+            binding.btnDeleteCategory.setOnClickListener {
+                onCategoryLongClick(category)
+            }
+
+            // 长按分类标题 → 删除分类（保留长按支持）
             binding.tvCategoryTitle.setOnLongClickListener {
                 onCategoryLongClick(category)
                 true

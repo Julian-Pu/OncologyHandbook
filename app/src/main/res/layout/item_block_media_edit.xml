@@ -46,18 +46,20 @@
                 android:textSize="12sp"
                 android:ellipsize="end"
                 android:maxLines="1" />
+
+            <!-- 删除按钮（在 CardView 内部，确保不被遮挡） -->
+            <ImageButton
+                android:id="@+id/btn_delete_block"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="top|end"
+                android:layout_margin="8dp"
+                android:background="@drawable/bg_circle_dark"
+                android:src="@android:drawable/ic_menu_delete"
+                android:contentDescription="删除此块"
+                android:padding="6dp"
+                app:tint="@color/white" />
         </FrameLayout>
     </androidx.cardview.widget.CardView>
-
-    <ImageButton
-        android:id="@+id/btn_delete_block"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:layout_gravity="top|end"
-        android:layout_margin="8dp"
-        android:background="@drawable/bg_circle_dark"
-        android:src="@android:drawable/ic_menu_close_clear_cancel"
-        android:contentDescription="删除此块"
-        app:tint="@color/white" />
 
 </FrameLayout>

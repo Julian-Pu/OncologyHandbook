@@ -10,7 +10,8 @@ import com.oncology.handbook.util.ManualSection
 
 class ManualCategoryAdapter(
     private var categories: List<ManualCategory>,
-    private val onSectionClick: (ManualCategory, ManualSection) -> Unit
+    private val onSectionClick: (ManualCategory, ManualSection) -> Unit,
+    private val onCategoryLongClick: (ManualCategory) -> Unit = {}
 ) : RecyclerView.Adapter<ManualCategoryAdapter.CategoryViewHolder>() {
 
     inner class CategoryViewHolder(val binding: ItemManualCategoryBinding) :
@@ -25,6 +26,12 @@ class ManualCategoryAdapter(
             }
             binding.recyclerViewSections.layoutManager = LinearLayoutManager(binding.root.context)
             binding.recyclerViewSections.adapter = sectionAdapter
+
+            // 长按分类标题 → 删除分类
+            binding.tvCategoryTitle.setOnLongClickListener {
+                onCategoryLongClick(category)
+                true
+            }
         }
     }
 

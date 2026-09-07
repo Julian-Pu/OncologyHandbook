@@ -7,12 +7,13 @@ import android.view.MenuItem
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.oncology.handbook.App
 import com.oncology.handbook.R
 import com.oncology.handbook.databinding.ActivityManualDetailBinding
-import com.oncology.handbook.util.ManualContent
+import com.oncology.handbook.util.ManualRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -60,7 +61,21 @@ class ManualDetailActivity : AppCompatActivity() {
 
     private fun loadContent() {
         lifecycleScope.launch {
-            // 优先从数据库加载用户修改的内容
+            // 用户章节直接从仓库加载
+            if (ManualRepository.isUserSection(sectionId)) {
+                val section = ManualRepository.findSection(this@ManualDetailActivity, categoryId, sectionId)
+                if (section != null) {
+                    currentHtml = section.htmlContent
+                    isUserModified = true
+                    setupWebView(currentHtml)
+                } else {
+                    binding.webView.loadData("<p>内容未找到</p>", "text/html; charset=utf-8", "UTF-8")
+                }
+                invalidateOptionsMenu()
+                return@launch
+            }
+
+            // 内置章节：优先从数据库加载用户修改的内容
             val userEdit = withContext(Dispatchers.IO) {
                 App.instance.database.manualEditDao().getBySectionId(sectionId)
             }
@@ -71,7 +86,7 @@ class ManualDetailActivity : AppCompatActivity() {
                 setupWebView(currentHtml)
             } else {
                 // 加载内置内容
-                val section = ManualContent.findSection(categoryId, sectionId)
+                val section = ManualRepository.findSection(this@ManualDetailActivity, categoryId, sectionId)
                 if (section != null) {
                     currentHtml = section.htmlContent
                     isUserModified = false
@@ -144,12 +159,42 @@ class ManualDetailActivity : AppCompatActivity() {
                     putExtra(ManualEditActivity.EXTRA_SECTION_ID, sectionId)
                     putExtra(ManualEditActivity.EXTRA_SECTION_TITLE, sectionTitle)
                     putExtra(ManualEditActivity.EXTRA_INITIAL_HTML, currentHtml)
+                    putExtra(ManualEditActivity.EXTRA_IS_USER_SECTION, ManualRepository.isUserSection(sectionId))
                 }
                 editLauncher.launch(intent)
                 true
             }
+            R.id.action_delete -> {
+                confirmDelete()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun confirmDelete() {
+        val isUser = ManualRepository.isUserSection(sectionId)
+        val message = if (isUser) {
+            "确定删除章节「$sectionTitle」吗？删除后不可恢复。"
+        } else {
+            "确定从列表中移除内置章节「$sectionTitle」吗？"
+        }
+        AlertDialog.Builder(this)
+            .setTitle("删除章节")
+            .setMessage(message)
+            .setPositiveButton("确定") { _, _ ->
+                lifecycleScope.launch {
+                    if (isUser) {
+                        ManualRepository.deleteUserSection(this@ManualDetailActivity, sectionId)
+                    } else {
+                        ManualRepository.markBuiltInSectionDeleted(this@ManualDetailActivity, sectionId)
+                    }
+                    setResult(RESULT_OK)
+                    finish()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     override fun onDestroy() {

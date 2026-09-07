@@ -10,14 +10,18 @@ import com.oncology.handbook.data.dao.CategoryDao
 import com.oncology.handbook.data.dao.ContentBlockDao
 import com.oncology.handbook.data.dao.ManualEditDao
 import com.oncology.handbook.data.dao.UserContentDao
+import com.oncology.handbook.data.dao.UserSectionDao
+import com.oncology.handbook.data.dao.UserCategoryDao
 import com.oncology.handbook.data.entity.Category
 import com.oncology.handbook.data.entity.ContentBlock
 import com.oncology.handbook.data.entity.ManualEdit
 import com.oncology.handbook.data.entity.UserContent
+import com.oncology.handbook.data.entity.UserSection
+import com.oncology.handbook.data.entity.UserCategory
 
 @Database(
-    entities = [UserContent::class, Category::class, ContentBlock::class, ManualEdit::class],
-    version = 3,
+    entities = [UserContent::class, Category::class, ContentBlock::class, ManualEdit::class, UserSection::class, UserCategory::class],
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -26,6 +30,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
     abstract fun contentBlockDao(): ContentBlockDao
     abstract fun manualEditDao(): ManualEditDao
+    abstract fun userSectionDao(): UserSectionDao
+    abstract fun userCategoryDao(): UserCategoryDao
 
     companion object {
         @Volatile
@@ -63,6 +69,41 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS user_sections (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        categoryId TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        htmlContent TEXT NOT NULL DEFAULT '',
+                        orderIndex INTEGER NOT NULL DEFAULT 0,
+                        createdAt INTEGER NOT NULL DEFAULT 0,
+                        updatedAt INTEGER NOT NULL DEFAULT 0
+                    )
+                    """
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_user_sections_categoryId ON user_sections(categoryId)")
+            }
+        }
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS user_categories (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        title TEXT NOT NULL,
+                        icon TEXT NOT NULL DEFAULT 'folder',
+                        orderIndex INTEGER NOT NULL DEFAULT 0,
+                        createdAt INTEGER NOT NULL DEFAULT 0
+                    )
+                    """
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -70,7 +111,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "oncology_handbook.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build().also { INSTANCE = it }
             }
         }

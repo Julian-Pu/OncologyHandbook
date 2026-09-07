@@ -19,6 +19,7 @@ import com.oncology.handbook.R
 import com.oncology.handbook.data.entity.ManualEdit
 import com.oncology.handbook.databinding.ActivityManualEditBinding
 import com.oncology.handbook.util.FileUtils
+import com.oncology.handbook.util.ManualRepository
 import com.oncology.handbook.util.StorageHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -31,6 +32,7 @@ class ManualEditActivity : AppCompatActivity() {
         const val EXTRA_SECTION_ID = "extra_section_id"
         const val EXTRA_SECTION_TITLE = "extra_section_title"
         const val EXTRA_INITIAL_HTML = "extra_initial_html"
+        const val EXTRA_IS_USER_SECTION = "extra_is_user_section"
     }
 
     private lateinit var binding: ActivityManualEditBinding
@@ -39,6 +41,7 @@ class ManualEditActivity : AppCompatActivity() {
     private var initialHtml: String = ""
     private var currentHtml: String = ""
     private var isSaving = false
+    private var isUserSection: Boolean = false
 
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
@@ -57,6 +60,7 @@ class ManualEditActivity : AppCompatActivity() {
         sectionTitle = intent.getStringExtra(EXTRA_SECTION_TITLE) ?: "编辑手册"
         initialHtml = intent.getStringExtra(EXTRA_INITIAL_HTML) ?: ""
         currentHtml = initialHtml
+        isUserSection = intent.getBooleanExtra(EXTRA_IS_USER_SECTION, false)
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply {
@@ -183,15 +187,22 @@ class ManualEditActivity : AppCompatActivity() {
             currentHtml = html
 
             lifecycleScope.launch {
-                withContext(Dispatchers.IO) {
-                    val edit = ManualEdit(
-                        sectionId = sectionId,
-                        htmlContent = html,
-                        updatedAt = System.currentTimeMillis()
-                    )
-                    App.instance.database.manualEditDao().insert(edit)
+                if (isUserSection) {
+                    // 用户新增章节：更新 user_sections 表
+                    ManualRepository.updateUserSectionContent(this@ManualEditActivity, sectionId, html)
+                    Toast.makeText(this@ManualEditActivity, "已保存", Toast.LENGTH_SHORT).show()
+                } else {
+                    // 内置章节修改：保存到 manual_edits 表
+                    withContext(Dispatchers.IO) {
+                        val edit = ManualEdit(
+                            sectionId = sectionId,
+                            htmlContent = html,
+                            updatedAt = System.currentTimeMillis()
+                        )
+                        App.instance.database.manualEditDao().insert(edit)
+                    }
+                    Toast.makeText(this@ManualEditActivity, "已保存修改", Toast.LENGTH_SHORT).show()
                 }
-                Toast.makeText(this@ManualEditActivity, "已保存修改", Toast.LENGTH_SHORT).show()
                 setResult(Activity.RESULT_OK)
                 isSaving = false
                 finish()

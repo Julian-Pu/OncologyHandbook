@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.VideoView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -34,7 +33,6 @@ class ContentDetailActivity : AppCompatActivity() {
     private var contentId: Long = -1L
     private val displayBlocks = mutableListOf<ContentBlock>()
     private lateinit var adapter: BlockViewerAdapter
-    private var activeVideoView: VideoView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,14 +59,11 @@ class ContentDetailActivity : AppCompatActivity() {
                 }
                 startActivity(intent)
             },
-            onVideoFullscreen = { filePath ->
+            onVideoClick = { filePath ->
                 val intent = Intent(this, VideoPlayerActivity::class.java).apply {
                     putExtra(VideoPlayerActivity.EXTRA_VIDEO_PATH, filePath)
                 }
                 startActivity(intent)
-            },
-            onVideoViewReady = { videoView ->
-                activeVideoView = videoView
             }
         )
         binding.rvBlocks.layoutManager = LinearLayoutManager(this)
@@ -184,16 +179,5 @@ class ContentDetailActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (contentId > 0) loadContent()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        activeVideoView?.let { if (it.isPlaying) it.pause() }
-    }
-
-    override fun onDestroy() {
-        activeVideoView?.stopPlayback()
-        activeVideoView = null
-        super.onDestroy()
     }
 }

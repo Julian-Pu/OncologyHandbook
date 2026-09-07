@@ -15,6 +15,14 @@ object Changelog {
 
     val logs = listOf(
         VersionLog(
+            versionName = "1.6.1",
+            versionCode = 10,
+            date = "2026-09-08",
+            items = listOf(
+                "【修复】修复从旧版本升级时数据库迁移验证失败导致点击手册/我的/设置闪退的问题"
+            )
+        ),
+        VersionLog(
             versionName = "1.6.0",
             versionCode = 9,
             date = "2026-09-08",

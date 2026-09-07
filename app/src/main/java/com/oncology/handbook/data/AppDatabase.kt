@@ -46,8 +46,8 @@ abstract class AppDatabase : RoomDatabase() {
                         noteId INTEGER NOT NULL,
                         type INTEGER NOT NULL,
                         orderIndex INTEGER NOT NULL,
-                        text TEXT NOT NULL DEFAULT '',
-                        filePath TEXT NOT NULL DEFAULT ''
+                        text TEXT NOT NULL,
+                        filePath TEXT NOT NULL
                     )
                     """
                 )
@@ -61,8 +61,8 @@ abstract class AppDatabase : RoomDatabase() {
                     """
                     CREATE TABLE IF NOT EXISTS manual_edits (
                         sectionId TEXT PRIMARY KEY NOT NULL,
-                        htmlContent TEXT NOT NULL DEFAULT '',
-                        updatedAt INTEGER NOT NULL DEFAULT 0
+                        htmlContent TEXT NOT NULL,
+                        updatedAt INTEGER NOT NULL
                     )
                     """
                 )
@@ -77,10 +77,10 @@ abstract class AppDatabase : RoomDatabase() {
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         categoryId TEXT NOT NULL,
                         title TEXT NOT NULL,
-                        htmlContent TEXT NOT NULL DEFAULT '',
-                        orderIndex INTEGER NOT NULL DEFAULT 0,
-                        createdAt INTEGER NOT NULL DEFAULT 0,
-                        updatedAt INTEGER NOT NULL DEFAULT 0
+                        htmlContent TEXT NOT NULL,
+                        orderIndex INTEGER NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL
                     )
                     """
                 )
@@ -95,9 +95,9 @@ abstract class AppDatabase : RoomDatabase() {
                     CREATE TABLE IF NOT EXISTS user_categories (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         title TEXT NOT NULL,
-                        icon TEXT NOT NULL DEFAULT 'folder',
-                        orderIndex INTEGER NOT NULL DEFAULT 0,
-                        createdAt INTEGER NOT NULL DEFAULT 0
+                        icon TEXT NOT NULL,
+                        orderIndex INTEGER NOT NULL,
+                        createdAt INTEGER NOT NULL
                     )
                     """
                 )

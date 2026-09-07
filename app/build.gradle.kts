@@ -1,7 +1,30 @@
+import java.util.Properties
+import java.io.FileInputStream
+import java.io.FileOutputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
+}
+
+// ===== 版本管理：每次构建自动递增 versionCode =====
+val versionPropsFile = file("version.properties")
+val versionProps = Properties()
+if (versionPropsFile.exists()) {
+    versionProps.load(FileInputStream(versionPropsFile))
+}
+var versionCode = (versionProps["VERSION_CODE"] as String?)?.toIntOrNull() ?: 1
+val versionName = versionProps["VERSION_NAME"] as String? ?: "1.0.0"
+
+// 仅在执行构建任务时递增版本号
+val isBuildTask = gradle.startParameter.taskNames.any {
+    it.contains("assemble") || it.contains("bundle") || it.contains("build")
+}
+if (isBuildTask) {
+    versionCode++
+    versionProps["VERSION_CODE"] = versionCode.toString()
+    versionProps.store(FileOutputStream(versionPropsFile), "Auto-incremented on build")
 }
 
 android {
@@ -12,8 +35,8 @@ android {
         applicationId = "com.oncology.handbook"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        this.versionCode = versionCode
+        this.versionName = versionName
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -35,6 +58,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     packaging {
@@ -44,9 +68,29 @@ android {
     }
 
     // aapt 忽略 assets 下大文件的压缩警告
-    aaptOptions {
+    androidResources {
         noCompress += "pdf"
     }
+}
+
+// APK 输出文件命名：应用名_版本号（构建完成后重命名）
+tasks.register("renameApk") {
+    doLast {
+        val isRelease = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
+        val buildType = if (isRelease) "release" else "debug"
+        val outputDir = layout.buildDirectory.dir("outputs/apk/$buildType").get().asFile
+        val apkFile = outputDir.listFiles { _, name -> name.endsWith(".apk") }?.firstOrNull()
+        if (apkFile != null) {
+            val newFile = file("${outputDir.absolutePath}/肿瘤科医生值班手册_v${versionName}.apk")
+            if (newFile.exists()) newFile.delete()
+            apkFile.renameTo(newFile)
+            println("APK 已重命名: ${newFile.name}")
+        }
+    }
+}
+afterEvaluate {
+    tasks.findByName("assembleDebug")?.finalizedBy("renameApk")
+    tasks.findByName("assembleRelease")?.finalizedBy("renameApk")
 }
 
 dependencies {

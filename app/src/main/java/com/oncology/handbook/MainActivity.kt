@@ -2,12 +2,16 @@ package com.oncology.handbook
 
 import android.Manifest
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
+import android.view.LayoutInflater
+import android.widget.CheckBox
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -16,6 +20,7 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.oncology.handbook.databinding.ActivityMainBinding
+import com.oncology.handbook.util.Changelog
 import com.oncology.handbook.util.StorageHelper
 
 class MainActivity : AppCompatActivity() {
@@ -57,6 +62,51 @@ class MainActivity : AppCompatActivity() {
         binding.bottomNav.setupWithNavController(navController)
 
         checkStoragePermissions()
+        checkChangelog()
+    }
+
+    private fun checkChangelog() {
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val lastShownVersion = prefs.getString("last_changelog_version", "") ?: ""
+        val currentVersion = getAppVersionName()
+
+        if (currentVersion != lastShownVersion) {
+            showChangelogDialog(prefs)
+        }
+    }
+
+    private fun getAppVersionName(): String {
+        return try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0.0"
+        } catch (e: Exception) {
+            "1.0.0"
+        }
+    }
+
+    private fun showChangelogDialog(prefs: SharedPreferences) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_changelog, null)
+        val tvChangelog = dialogView.findViewById<TextView>(R.id.tv_changelog)
+        val cbDontShow = dialogView.findViewById<CheckBox>(R.id.cb_dont_show)
+
+        tvChangelog.text = Changelog.formatLatestLog()
+
+        val versionName = getAppVersionName()
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("更新记录")
+            .setView(dialogView)
+            .setPositiveButton("知道了") { _, _ ->
+                if (cbDontShow.isChecked) {
+                    prefs.edit().putString("last_changelog_version", versionName).apply()
+                }
+            }
+            .setOnCancelListener {
+                if (cbDontShow.isChecked) {
+                    prefs.edit().putString("last_changelog_version", versionName).apply()
+                }
+            }
+            .create()
+
+        dialog.show()
     }
 
     private fun checkStoragePermissions() {

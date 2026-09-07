@@ -15,6 +15,18 @@ object Changelog {
 
     val logs = listOf(
         VersionLog(
+            versionName = "1.3.0",
+            versionCode = 6,
+            date = "2026-09-08",
+            items = listOf(
+                "【新增】手册内容支持用户自行修改，所见即所得编辑器",
+                "【新增】手册内容支持添加图片（不支持视频）",
+                "【修复】笔记列表显示\"无文字内容\"的问题，保存时同步生成预览",
+                "【修复】图片查看器图片缩到左上角的问题，初始化为适配屏幕居中",
+                "【优化】笔记视频改为页面内联自动播放，带全屏播放按钮"
+            )
+        ),
+        VersionLog(
             versionName = "1.2.0",
             versionCode = 4,
             date = "2026-09-08",

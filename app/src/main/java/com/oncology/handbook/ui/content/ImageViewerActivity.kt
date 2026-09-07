@@ -2,11 +2,11 @@ package com.oncology.handbook.ui.content
 
 import android.graphics.Matrix
 import android.graphics.PointF
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
-import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import coil.load
@@ -24,13 +24,12 @@ class ImageViewerActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityImageViewerBinding
 
-    // 缩放相关
     private val matrix = Matrix()
     private val savedMatrix = Matrix()
     private var mode = NONE
     private var scale = 1f
     private var minScale = 1f
-    private var maxScale = 5f
+    private val maxScale = 5f
 
     private val startPoint = PointF()
     private val midPoint = PointF()
@@ -51,11 +50,46 @@ class ImageViewerActivity : AppCompatActivity() {
             return
         }
 
-        binding.ivFullscreen.load(File(imagePath))
-
         binding.btnClose.setOnClickListener { finish() }
 
+        // 图片加载完成后初始化 matrix 为适配屏幕居中
+        binding.ivFullscreen.load(File(imagePath)) {
+            listener(object : coil.request.ImageRequest.Listener {
+                override fun onSuccess(
+                    request: coil.request.ImageRequest,
+                    result: coil.request.SuccessResult
+                ) {
+                    binding.ivFullscreen.post { initMatrix() }
+                }
+            })
+        }
+
         setupZoom()
+    }
+
+    /** 初始化 matrix：图片等比缩放适配屏幕，居中显示 */
+    private fun initMatrix() {
+        val drawable: Drawable = binding.ivFullscreen.drawable ?: return
+        val viewW = binding.ivFullscreen.width.toFloat()
+        val viewH = binding.ivFullscreen.height.toFloat()
+        val drawableW = drawable.intrinsicWidth.toFloat()
+        val drawableH = drawable.intrinsicHeight.toFloat()
+
+        if (viewW == 0f || viewH == 0f || drawableW == 0f || drawableH == 0f) return
+
+        val scaleX = viewW / drawableW
+        val scaleY = viewH / drawableH
+        val fitScale = minOf(scaleX, scaleY)
+
+        matrix.reset()
+        matrix.postScale(fitScale, fitScale)
+        val dx = (viewW - drawableW * fitScale) / 2f
+        val dy = (viewH - drawableH * fitScale) / 2f
+        matrix.postTranslate(dx, dy)
+
+        scale = fitScale
+        minScale = fitScale
+        binding.ivFullscreen.imageMatrix = matrix
     }
 
     private fun setupZoom() {
@@ -87,7 +121,7 @@ class ImageViewerActivity : AppCompatActivity() {
                     if (mode == DRAG) {
                         matrix.set(savedMatrix)
                         matrix.postTranslate(event.x - startPoint.x, event.y - startPoint.y)
-                    } else if (mode == ZOOM && scaleGestureDetector.isInProgress.not()) {
+                    } else if (mode == ZOOM && !scaleGestureDetector.isInProgress) {
                         val newDist = spacing(event)
                         if (newDist > 10f) {
                             matrix.set(savedMatrix)
@@ -123,15 +157,12 @@ class ImageViewerActivity : AppCompatActivity() {
     private inner class GestureListener : GestureDetector.SimpleOnGestureListener() {
         override fun onDoubleTap(e: MotionEvent): Boolean {
             if (scale > minScale) {
-                // 双击缩小到原始
-                matrix.reset()
-                scale = minScale
+                initMatrix()
             } else {
-                // 双击放大
                 matrix.postScale(2f, 2f, e.x, e.y)
-                scale = 2f
+                scale *= 2f
+                binding.ivFullscreen.imageMatrix = matrix
             }
-            binding.ivFullscreen.imageMatrix = matrix
             return true
         }
     }

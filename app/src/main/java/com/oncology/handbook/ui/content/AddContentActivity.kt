@@ -191,6 +191,12 @@ class AddContentActivity : AppCompatActivity() {
             return
         }
 
+        // 从文字块生成预览文本，用于列表展示
+        val contentPreview = validBlocks
+            .filter { it.type == ContentBlock.TYPE_TEXT }
+            .joinToString(" ") { it.text.trim() }
+            .take(200)
+
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
                 val db = App.instance.database
@@ -202,6 +208,7 @@ class AddContentActivity : AppCompatActivity() {
                         db.userContentDao().update(
                             existing.copy(
                                 title = title.ifEmpty { "无标题" },
+                                content = contentPreview,
                                 category = category,
                                 updatedAt = now
                             )
@@ -220,6 +227,7 @@ class AddContentActivity : AppCompatActivity() {
                     val noteId = db.userContentDao().insert(
                         UserContent(
                             title = title.ifEmpty { "无标题" },
+                            content = contentPreview,
                             category = category,
                             createdAt = now,
                             updatedAt = now

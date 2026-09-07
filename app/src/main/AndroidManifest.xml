@@ -70,6 +70,13 @@
             android:configChanges="orientation|screenSize"
             android:parentActivityName=".MainActivity" />
 
+        <activity
+            android:name=".ui.manual.ManualEditActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize"
+            android:parentActivityName=".ui.manual.ManualDetailActivity" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

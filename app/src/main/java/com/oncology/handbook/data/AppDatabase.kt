@@ -8,14 +8,16 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.oncology.handbook.data.dao.CategoryDao
 import com.oncology.handbook.data.dao.ContentBlockDao
+import com.oncology.handbook.data.dao.ManualEditDao
 import com.oncology.handbook.data.dao.UserContentDao
 import com.oncology.handbook.data.entity.Category
 import com.oncology.handbook.data.entity.ContentBlock
+import com.oncology.handbook.data.entity.ManualEdit
 import com.oncology.handbook.data.entity.UserContent
 
 @Database(
-    entities = [UserContent::class, Category::class, ContentBlock::class],
-    version = 2,
+    entities = [UserContent::class, Category::class, ContentBlock::class, ManualEdit::class],
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -23,6 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun userContentDao(): UserContentDao
     abstract fun categoryDao(): CategoryDao
     abstract fun contentBlockDao(): ContentBlockDao
+    abstract fun manualEditDao(): ManualEditDao
 
     companion object {
         @Volatile
@@ -46,6 +49,20 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS manual_edits (
+                        sectionId TEXT PRIMARY KEY NOT NULL,
+                        htmlContent TEXT NOT NULL DEFAULT '',
+                        updatedAt INTEGER NOT NULL DEFAULT 0
+                    )
+                    """
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -53,7 +70,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "oncology_handbook.db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build().also { INSTANCE = it }
             }
         }

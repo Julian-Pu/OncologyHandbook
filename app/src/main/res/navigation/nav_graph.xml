@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/homeFragment">
+
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.oncology.handbook.ui.home.HomeFragment"
+        android:label="首页" />
+
+    <fragment
+        android:id="@+id/bookshelfFragment"
+        android:name="com.oncology.handbook.ui.bookshelf.BookshelfFragment"
+        android:label="书架" />
+
+    <fragment
+        android:id="@+id/manualFragment"
+        android:name="com.oncology.handbook.ui.manual.ManualFragment"
+        android:label="手册" />
+
+    <fragment
+        android:id="@+id/myContentFragment"
+        android:name="com.oncology.handbook.ui.content.MyContentFragment"
+        android:label="我的内容" />
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.oncology.handbook.ui.settings.SettingsFragment"
+        android:label="设置" />
+</navigation>

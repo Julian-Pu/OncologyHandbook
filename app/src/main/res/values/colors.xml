@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 主色调：医疗蓝 -->
+    <color name="primary">#1565C0</color>
+    <color name="primary_dark">#0D47A1</color>
+    <color name="primary_light">#BBDEFB</color>
+    <color name="accent">#FF6F00</color>
+
+    <!-- 文字 -->
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#616161</color>
+    <color name="text_hint">#9E9E9E</color>
+
+    <!-- 背景 -->
+    <color name="bg_gray">#F5F5F5</color>
+    <color name="white">#FFFFFF</color>
+    <color name="white_50">#80FFFFFF</color>
+    <color name="white_70">#B3FFFFFF</color>
+    <color name="white_80">#CCFFFFFF</color>
+    <color name="black">#000000</color>
+
+    <!-- 功能色 -->
+    <color name="error">#C62828</color>
+    <color name="success">#2E7D32</color>
+    <color name="warning">#F57C00</color>
+
+    <!-- 首页卡片 -->
+    <color name="emergency_card">#C62828</color>
+    <color name="ecg_card">#1565C0</color>
+    <color name="add_card">#2E7D32</color>
+    <color name="info_card">#6A1B9A</color>
+
+    <!-- PDF 标签 -->
+    <color name="pdf_bg">#C62828</color>
+
+    <!-- 底部导航选中色 -->
+    <color name="bottom_nav_selected">#1565C0</color>
+    <color name="bottom_nav_unselected">#9E9E9E</color>
+</resources>

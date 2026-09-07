@@ -1,28 +1,23 @@
 package com.oncology.handbook.ui.content
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.MediaController
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
-import coil.load
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.oncology.handbook.App
+import com.oncology.handbook.adapter.BlockViewerAdapter
+import com.oncology.handbook.data.entity.ContentBlock
 import com.oncology.handbook.data.entity.UserContent
 import com.oncology.handbook.databinding.ActivityContentDetailBinding
 import com.oncology.handbook.util.FileUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -36,6 +31,8 @@ class ContentDetailActivity : AppCompatActivity() {
     private lateinit var binding: ActivityContentDetailBinding
     private var content: UserContent? = null
     private var contentId: Long = -1L
+    private val displayBlocks = mutableListOf<ContentBlock>()
+    private lateinit var adapter: BlockViewerAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,22 +46,48 @@ class ContentDetailActivity : AppCompatActivity() {
             setDisplayHomeAsUpEnabled(true)
         }
 
+        setupBlocksList()
         loadContent()
+    }
+
+    private fun setupBlocksList() {
+        adapter = BlockViewerAdapter(
+            blocks = displayBlocks,
+            onImageClick = { filePath ->
+                val intent = Intent(this, ImageViewerActivity::class.java).apply {
+                    putExtra(ImageViewerActivity.EXTRA_IMAGE_PATH, filePath)
+                }
+                startActivity(intent)
+            },
+            onVideoClick = { filePath ->
+                val intent = Intent(this, VideoPlayerActivity::class.java).apply {
+                    putExtra(VideoPlayerActivity.EXTRA_VIDEO_PATH, filePath)
+                }
+                startActivity(intent)
+            }
+        )
+        binding.rvBlocks.layoutManager = LinearLayoutManager(this)
+        binding.rvBlocks.adapter = adapter
     }
 
     private fun loadContent() {
         lifecycleScope.launch {
-            content = withContext(Dispatchers.IO) {
-                App.instance.database.userContentDao().getById(contentId)
+            val (c, blockList) = withContext(Dispatchers.IO) {
+                val db = App.instance.database
+                val content = db.userContentDao().getById(contentId)
+                val blocks = db.contentBlockDao().getByNoteId(contentId)
+                content to blocks
             }
-            content?.let { displayContent(it) } ?: run {
+
+            content = c
+            c?.let { displayContent(it, blockList) } ?: run {
                 Toast.makeText(this@ContentDetailActivity, "内容不存在", Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
     }
 
-    private fun displayContent(c: UserContent) {
+    private fun displayContent(c: UserContent, blockList: List<ContentBlock>) {
         supportActionBar?.title = c.title.ifEmpty { "无标题" }
 
         binding.tvTitle.text = c.title.ifEmpty { "无标题" }
@@ -73,72 +96,32 @@ class ContentDetailActivity : AppCompatActivity() {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
         binding.tvDate.text = "更新于：${dateFormat.format(Date(c.updatedAt))}"
 
-        if (c.content.isNotEmpty()) {
-            binding.tvContent.text = c.content
-            binding.tvContent.visibility = View.VISIBLE
+        displayBlocks.clear()
+
+        if (blockList.isNotEmpty()) {
+            // 新版数据
+            displayBlocks.addAll(blockList)
         } else {
-            binding.tvContent.visibility = View.GONE
+            // 旧版数据兼容
+            if (c.content.isNotEmpty()) {
+                displayBlocks.add(
+                    ContentBlock(noteId = contentId, type = ContentBlock.TYPE_TEXT, text = c.content, orderIndex = 0)
+                )
+            }
+            var order = 1
+            c.imagePaths.split("|").filter { it.isNotEmpty() }.forEach { path ->
+                displayBlocks.add(
+                    ContentBlock(noteId = contentId, type = ContentBlock.TYPE_IMAGE, filePath = path, orderIndex = order++)
+                )
+            }
+            if (c.videoPath.isNotEmpty()) {
+                displayBlocks.add(
+                    ContentBlock(noteId = contentId, type = ContentBlock.TYPE_VIDEO, filePath = c.videoPath, orderIndex = order)
+                )
+            }
         }
 
-        // 显示图片
-        val imagePaths = c.imagePaths.split("|").filter { it.isNotEmpty() }
-        if (imagePaths.isNotEmpty()) {
-            binding.imagesContainer.visibility = View.VISIBLE
-            binding.imagesContainer.removeAllViews()
-            for (path in imagePaths) {
-                val file = File(path)
-                if (file.exists()) {
-                    val imageView = ImageView(this).apply {
-                        layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            600
-                        ).apply { bottomMargin = 16 }
-                        scaleType = ImageView.ScaleType.FIT_CENTER
-                        setOnClickListener { openImage(file) }
-                    }
-                    imageView.load(file)
-                    binding.imagesContainer.addView(imageView)
-                }
-            }
-        } else {
-            binding.imagesContainer.visibility = View.GONE
-        }
-
-        // 显示视频
-        if (c.videoPath.isNotEmpty()) {
-            val videoFile = File(c.videoPath)
-            if (videoFile.exists()) {
-                binding.videoContainer.visibility = View.VISIBLE
-                val mediaController = MediaController(this)
-                mediaController.setAnchorView(binding.videoView)
-                binding.videoView.setVideoURI(Uri.fromFile(videoFile))
-                binding.videoView.setMediaController(mediaController)
-                binding.videoView.setOnPreparedListener {
-                    binding.videoView.start()
-                }
-            } else {
-                binding.videoContainer.visibility = View.GONE
-            }
-        } else {
-            binding.videoContainer.visibility = View.GONE
-        }
-    }
-
-    private fun openImage(file: File) {
-        try {
-            val uri = FileProvider.getUriForFile(
-                this,
-                "${packageName}.fileprovider",
-                file
-            )
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, "image/*")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            startActivity(intent)
-        } catch (e: Exception) {
-            Toast.makeText(this, "无法打开图片", Toast.LENGTH_SHORT).show()
-        }
+        adapter.notifyDataSetChanged()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -160,9 +143,7 @@ class ContentDetailActivity : AppCompatActivity() {
                 AlertDialog.Builder(this)
                     .setTitle("删除确认")
                     .setMessage("确定要删除这条内容吗？关联的图片和视频文件也将被删除。")
-                    .setPositiveButton("删除") { _, _ ->
-                        deleteContent()
-                    }
+                    .setPositiveButton("删除") { _, _ -> deleteContent() }
                     .setNegativeButton("取消", null)
                     .show()
                 true
@@ -173,13 +154,21 @@ class ContentDetailActivity : AppCompatActivity() {
 
     private fun deleteContent() {
         content?.let { c ->
-            // 删除关联文件
-            c.imagePaths.split("|").filter { it.isNotEmpty() }.forEach { FileUtils.deleteFile(it) }
-            if (c.videoPath.isNotEmpty()) FileUtils.deleteFile(c.videoPath)
+            // 收集所有关联文件路径（包括 blocks 中的）
+            val allFilePaths = mutableListOf<String>()
+            c.imagePaths.split("|").filter { it.isNotEmpty() }.forEach { allFilePaths.add(it) }
+            if (c.videoPath.isNotEmpty()) allFilePaths.add(c.videoPath)
+            displayBlocks.forEach { block ->
+                if (block.filePath.isNotEmpty()) allFilePaths.add(block.filePath)
+            }
 
             lifecycleScope.launch {
                 withContext(Dispatchers.IO) {
-                    App.instance.database.userContentDao().delete(c)
+                    val db = App.instance.database
+                    db.contentBlockDao().deleteByNoteId(contentId)
+                    db.userContentDao().delete(c)
+                    // 删除文件
+                    allFilePaths.distinct().forEach { FileUtils.deleteFile(it) }
                 }
                 Toast.makeText(this@ContentDetailActivity, "已删除", Toast.LENGTH_SHORT).show()
                 finish()
@@ -190,10 +179,5 @@ class ContentDetailActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (contentId > 0) loadContent()
-    }
-
-    override fun onDestroy() {
-        binding.videoView.stopPlayback()
-        super.onDestroy()
     }
 }

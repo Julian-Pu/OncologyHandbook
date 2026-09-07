@@ -65,6 +65,11 @@ class MainActivity : AppCompatActivity() {
         checkChangelog()
     }
 
+    /** 供 Fragment 调用，切换底部导航 Tab */
+    fun switchToTab(tabId: Int) {
+        binding.bottomNav.selectedItemId = tabId
+    }
+
     private fun checkChangelog() {
         val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
         val lastShownVersion = prefs.getString("last_changelog_version", "") ?: ""

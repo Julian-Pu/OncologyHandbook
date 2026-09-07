@@ -53,6 +53,18 @@
             android:parentActivityName=".MainActivity" />
 
         <activity
+            android:name=".ui.content.ImageViewerActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+
+        <activity
+            android:name=".ui.content.VideoPlayerActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+
+        <activity
             android:name=".ui.manual.ManualDetailActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize"

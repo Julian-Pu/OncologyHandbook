@@ -6,7 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import androidx.navigation.fragment.findNavController
+import com.oncology.handbook.MainActivity
 import com.oncology.handbook.R
 import com.oncology.handbook.databinding.FragmentHomeBinding
 import com.oncology.handbook.ui.bookshelf.PdfViewerActivity
@@ -50,9 +50,9 @@ class HomeFragment : Fragment() {
             startActivity(Intent(requireContext(), AddContentActivity::class.java))
         }
 
-        // 手册卡片：跳转到手册标签页
+        // 手册卡片：切换到底部导航的手册Tab
         binding.cardManual.setOnClickListener {
-            findNavController().navigate(R.id.manualFragment)
+            (activity as? MainActivity)?.switchToTab(R.id.manualFragment)
         }
 
         // 显示手册概览

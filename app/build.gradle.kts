@@ -14,16 +14,16 @@ val versionProps = Properties()
 if (versionPropsFile.exists()) {
     versionProps.load(FileInputStream(versionPropsFile))
 }
-var versionCode = (versionProps["VERSION_CODE"] as String?)?.toIntOrNull() ?: 1
-val versionName = versionProps["VERSION_NAME"] as String? ?: "1.0.0"
+var appVersionCode = (versionProps["VERSION_CODE"] as String?)?.toIntOrNull() ?: 1
+val appVersionName = versionProps["VERSION_NAME"] as String? ?: "1.0.0"
 
 // 仅在执行构建任务时递增版本号
 val isBuildTask = gradle.startParameter.taskNames.any {
     it.contains("assemble") || it.contains("bundle") || it.contains("build")
 }
 if (isBuildTask) {
-    versionCode++
-    versionProps["VERSION_CODE"] = versionCode.toString()
+    appVersionCode++
+    versionProps["VERSION_CODE"] = appVersionCode.toString()
     versionProps.store(FileOutputStream(versionPropsFile), "Auto-incremented on build")
 }
 
@@ -35,8 +35,8 @@ android {
         applicationId = "com.oncology.handbook"
         minSdk = 24
         targetSdk = 34
-        this.versionCode = versionCode
-        this.versionName = versionName
+        versionCode = appVersionCode
+        versionName = appVersionName
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -81,7 +81,7 @@ tasks.register("renameApk") {
         val outputDir = layout.buildDirectory.dir("outputs/apk/$buildType").get().asFile
         val apkFile = outputDir.listFiles { _, name -> name.endsWith(".apk") }?.firstOrNull()
         if (apkFile != null) {
-            val newFile = file("${outputDir.absolutePath}/肿瘤科医生值班手册_v${versionName}.apk")
+            val newFile = file("${outputDir.absolutePath}/肿瘤科医生值班手册_v${appVersionName}.apk")
             if (newFile.exists()) newFile.delete()
             apkFile.renameTo(newFile)
             println("APK 已重命名: ${newFile.name}")

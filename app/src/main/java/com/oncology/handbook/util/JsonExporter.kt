@@ -2,6 +2,8 @@ package com.oncology.handbook.util
 
 import android.content.Context
 import android.net.Uri
+import com.oncology.handbook.App
+import com.oncology.handbook.data.entity.ContentBlock
 import com.oncology.handbook.data.entity.UserContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -30,20 +32,48 @@ object JsonExporter {
             val mediaDir = File(exportDir, "media")
             mediaDir.mkdirs()
 
+            val db = App.instance.database
             val jsonArray = JSONArray()
+
             for (c in contents) {
                 val obj = JSONObject().apply {
                     put("title", c.title)
-                    put("content", c.content)
                     put("category", c.category)
                     put("createdAt", c.createdAt)
                     put("updatedAt", c.updatedAt)
                 }
 
-                // 复制图片
+                // 导出 blocks（新版数据）
+                val blocks = db.contentBlockDao().getByNoteId(c.id)
+                val blocksArray = JSONArray()
+                val allMediaPaths = mutableSetOf<String>()
+
+                for (block in blocks) {
+                    val blockObj = JSONObject().apply {
+                        put("type", block.type)
+                        put("orderIndex", block.orderIndex)
+                        put("text", block.text)
+                    }
+                    if (block.filePath.isNotEmpty()) {
+                        val src = File(block.filePath)
+                        if (src.exists()) {
+                            val dest = File(mediaDir, src.name)
+                            FileUtils.copyFile(src, dest)
+                            blockObj.put("filePath", "media/${src.name}")
+                            allMediaPaths.add(block.filePath)
+                        } else {
+                            blockObj.put("filePath", "")
+                        }
+                    }
+                    blocksArray.put(blockObj)
+                }
+                obj.put("blocks", blocksArray)
+
+                // 兼容旧字段（旧版数据无 blocks 时用这些）
                 val imagePaths = c.imagePaths.split("|").filter { it.isNotEmpty() }
                 val exportedImages = JSONArray()
                 for (imgPath in imagePaths) {
+                    if (allMediaPaths.contains(imgPath)) continue // 已在 blocks 中
                     val src = File(imgPath)
                     if (src.exists()) {
                         val dest = File(mediaDir, src.name)
@@ -53,8 +83,7 @@ object JsonExporter {
                 }
                 obj.put("imagePaths", exportedImages.join("|"))
 
-                // 复制视频
-                if (c.videoPath.isNotEmpty()) {
+                if (c.videoPath.isNotEmpty() && !allMediaPaths.contains(c.videoPath)) {
                     val src = File(c.videoPath)
                     if (src.exists()) {
                         val dest = File(mediaDir, src.name)
@@ -67,12 +96,15 @@ object JsonExporter {
                     obj.put("videoPath", "")
                 }
 
+                // 保留旧 content 字段用于兼容
+                obj.put("content", c.content)
+
                 jsonArray.put(obj)
             }
 
             val root = JSONObject().apply {
                 put("appName", "肿瘤科医生值班手册")
-                put("version", 1)
+                put("version", 2)
                 put("exportTime", System.currentTimeMillis())
                 put("count", contents.size)
                 put("contents", jsonArray)
@@ -87,7 +119,7 @@ object JsonExporter {
         }
     }
 
-    /** 从 JSON 文件导入内容 */
+    /** 从 JSON 文件导入内容（支持 v1 和 v2 格式） */
     suspend fun importFromJson(
         context: Context,
         uri: Uri
@@ -99,28 +131,63 @@ object JsonExporter {
             val root = JSONObject(jsonText)
             val contentsArray = root.optJSONArray("contents") ?: return@withContext 0 to "文件格式不正确"
 
-            // 解析导入文件所在目录（用于复制媒体文件）
+            // 导入文件所在目录（用于复制媒体文件）
             val importBaseDir = File(StorageHelper.getRootDir(), "import_${System.currentTimeMillis()}")
             importBaseDir.mkdirs()
+            val mediaImportDir = File(importBaseDir, "media")
+            mediaImportDir.mkdirs()
 
             var imported = 0
-            val dao = com.oncology.handbook.App.instance.database.userContentDao()
+            val db = App.instance.database
 
             for (i in 0 until contentsArray.length()) {
                 val obj = contentsArray.getJSONObject(i)
-                val imagePathsStr = obj.optString("imagePaths", "")
-                val videoPathStr = obj.optString("videoPath", "")
 
                 val content = UserContent(
                     title = obj.optString("title", "未命名"),
                     content = obj.optString("content", ""),
                     category = obj.optString("category", "导入"),
-                    imagePaths = imagePathsStr,
-                    videoPath = videoPathStr,
+                    imagePaths = obj.optString("imagePaths", ""),
+                    videoPath = obj.optString("videoPath", ""),
                     createdAt = obj.optLong("createdAt", System.currentTimeMillis()),
                     updatedAt = obj.optLong("updatedAt", System.currentTimeMillis())
                 )
-                dao.insert(content)
+                val noteId = db.userContentDao().insert(content)
+
+                // 导入 blocks（v2 格式）
+                val blocksArray = obj.optJSONArray("blocks")
+                if (blocksArray != null && blocksArray.length() > 0) {
+                    val blocks = mutableListOf<ContentBlock>()
+                    for (j in 0 until blocksArray.length()) {
+                        val blockObj = blocksArray.getJSONObject(j)
+                        val relativePath = blockObj.optString("filePath", "")
+                        val actualPath = if (relativePath.isNotEmpty()) {
+                            // 从导入目录复制媒体文件到应用目录
+                            val srcFile = File(importBaseDir, relativePath)
+                            if (srcFile.exists()) {
+                                val destDir = if (blockObj.optInt("type") == ContentBlock.TYPE_VIDEO)
+                                    StorageHelper.getVideosDir() else StorageHelper.getImagesDir()
+                                val destFile = File(destDir, srcFile.name)
+                                FileUtils.copyFile(srcFile, destFile)
+                                destFile.absolutePath
+                            } else ""
+                        } else ""
+
+                        blocks.add(
+                            ContentBlock(
+                                noteId = noteId,
+                                type = blockObj.optInt("type", ContentBlock.TYPE_TEXT),
+                                orderIndex = blockObj.optInt("orderIndex", j),
+                                text = blockObj.optString("text", ""),
+                                filePath = actualPath
+                            )
+                        )
+                    }
+                    if (blocks.isNotEmpty()) {
+                        db.contentBlockDao().insertAll(blocks)
+                    }
+                }
+
                 imported++
             }
 

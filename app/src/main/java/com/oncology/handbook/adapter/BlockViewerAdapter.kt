@@ -3,6 +3,7 @@ package com.oncology.handbook.adapter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.VideoView
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
@@ -51,6 +52,24 @@ class BlockViewerAdapter(
                 binding.videoView.setVideoPath(block.filePath)
                 binding.videoView.setOnPreparedListener { mp ->
                     mp.isLooping = true
+                    // centerCrop: 缩放视频填充整个容器，超出部分由父布局裁剪
+                    val videoWidth = mp.videoWidth
+                    val videoHeight = mp.videoHeight
+                    val container = binding.videoView.parent as View
+                    container.post {
+                        val cw = container.width
+                        val ch = container.height
+                        if (cw > 0 && ch > 0 && videoWidth > 0 && videoHeight > 0) {
+                            val scale = maxOf(
+                                cw.toFloat() / videoWidth,
+                                ch.toFloat() / videoHeight
+                            )
+                            val lp = binding.videoView.layoutParams as FrameLayout.LayoutParams
+                            lp.width = (videoWidth * scale).toInt()
+                            lp.height = (videoHeight * scale).toInt()
+                            binding.videoView.layoutParams = lp
+                        }
+                    }
                     binding.videoView.start()
                 }
                 binding.videoView.setOnErrorListener { _, _, _ ->

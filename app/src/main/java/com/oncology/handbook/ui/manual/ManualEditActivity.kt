@@ -65,6 +65,29 @@ class ManualEditActivity : AppCompatActivity() {
         }
 
         setupWebView()
+        setupFormattingToolbar()
+    }
+
+    private fun execCommand(command: String, value: String? = null) {
+        binding.webView.requestFocus()
+        val js = if (value != null) {
+            "document.execCommand('$command', false, '$value')"
+        } else {
+            "document.execCommand('$command', false, null)"
+        }
+        binding.webView.evaluateJavascript(js, null)
+    }
+
+    private fun setupFormattingToolbar() {
+        binding.btnBold.setOnClickListener { execCommand("bold") }
+        binding.btnItalic.setOnClickListener { execCommand("italic") }
+        binding.btnUnderline.setOnClickListener { execCommand("underline") }
+        binding.btnColorRed.setOnClickListener { execCommand("foreColor", "#c62828") }
+        binding.btnColorBlue.setOnClickListener { execCommand("foreColor", "#1565c0") }
+        binding.btnColorGreen.setOnClickListener { execCommand("foreColor", "#2e7d32") }
+        binding.btnColorBlack.setOnClickListener { execCommand("foreColor", "#212121") }
+        binding.btnHeading.setOnClickListener { execCommand("formatBlock", "h3") }
+        binding.btnClearFormat.setOnClickListener { execCommand("removeFormat") }
     }
 
     private fun setupWebView() {

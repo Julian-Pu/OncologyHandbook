@@ -15,6 +15,15 @@ object Changelog {
 
     val logs = listOf(
         VersionLog(
+            versionName = "1.4.0",
+            versionCode = 7,
+            date = "2026-09-08",
+            items = listOf(
+                "【修复】笔记视频播放画面异常（竖屏视频一半黑屏），改为裁剪填充整个播放区域",
+                "【新增】手册编辑器增加格式化工具栏：加粗、斜体、下划线、文字颜色（红/蓝/绿/黑）、标题、清除格式"
+            )
+        ),
+        VersionLog(
             versionName = "1.3.0",
             versionCode = 6,
             date = "2026-09-08",

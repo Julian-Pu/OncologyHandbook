@@ -64,6 +64,13 @@ OncologyHandbookApp/
 
 > **注意**：克隆项目后，用 Android Studio 打开会自动生成 `local.properties`（含 SDK 路径）。若用命令行构建，需手动在项目根目录创建 `local.properties`，内容为 `sdk.dir=你的Android SDK路径`。
 
+> **PDF 书籍**：由于体积较大，3 本 PDF 参考书籍未纳入 Git 版本控制。构建前需将以下文件手动放入 `app/src/main/assets/books/` 目录：
+> - `心电图从入门到精通.pdf`
+> - `急诊医生心电图手册（第一册）（高清中文版）.pdf`
+> - `急诊医生心电图手册（第二册）（高清中文版）.pdf`
+>
+> 如需更换书籍，替换文件后同步修改 `BookshelfFragment.kt` 中的书籍列表即可。
+
 ### 构建 APK
 
 1. **打开项目**: 用 Android Studio 打开 `OncologyHandbookApp` 文件夹
